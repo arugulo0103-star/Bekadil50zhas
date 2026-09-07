@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RSVP — Бекеділла 50 жас</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f5f1e8;color:#34423d;font-family:Manrope,sans-serif}.wrap{max-width:1050px;margin:40px auto;padding:20px}.head{display:flex;justify-content:space-between;align-items:center;gap:20px}.head h1{font:600 42px "Cormorant Garamond";margin:0}.btn{border:0;border-radius:9px;padding:12px 17px;background:#33463f;color:#fff;cursor:pointer;font-weight:700}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:25px 0}.stat{background:#fff;border:1px solid #e4d5b8;border-radius:14px;padding:22px}.stat b{display:block;font-size:28px;margin-top:7px}.table{background:#fff;border:1px solid #e4d5b8;border-radius:14px;overflow:auto}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:14px;border-bottom:1px solid #eee;font-size:13px}th{font-size:11px;letter-spacing:1px;color:#8d7b59}.yes{color:#35705b;font-weight:700}.no{color:#a65b5b;font-weight:700}.note{margin-top:15px;color:#777;font-size:12px}.error{color:#a33}.token{margin:20px 0;display:flex;gap:8px}.token input{flex:1;padding:12px;border:1px solid #ddd;border-radius:8px}
+@media(max-width:650px){.stats{grid-template-columns:1fr}.head{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="head"><h1>RSVP · Бекеділла 50 жас</h1><button class="btn" onclick="load()">Обновить</button></div>
+<div class="token"><input id="token" placeholder="Токен доступа (из Code.gs)"><button class="btn" onclick="saveToken()">Сохранить</button></div>
+<div class="stats"><div class="stat">Придут <b id="yes">—</b></div><div class="stat">Не придут <b id="no">—</b></div><div class="stat">Всего гостей <b id="people">—</b></div></div>
+<div class="table"><table><thead><tr><th>Имя</th><th>Ответ</th><th>Гостей</th><th>Дата/время</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="note">Эта страница показывает данные из Google Sheets после подключения Google Apps Script. Токен хранится только в вашем браузере.</div>
+</div>
+<script>
+const GAS_URL="PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+document.getElementById("token").value=localStorage.getItem("bekedilla_token")||"";
+function saveToken(){localStorage.setItem("bekedilla_token",document.getElementById("token").value);load()}
+async function load(){
+ const rows=document.getElementById("rows"), token=document.getElementById("token").value;
+ if(GAS_URL.startsWith("PASTE_")){ 
+   const arr=JSON.parse(localStorage.getItem("bekedilla_rsvp")||"[]");
+   render(arr); return;
+ }
+ try{
+   const r=await fetch(GAS_URL+"?action=list&token="+encodeURIComponent(token));
+   const j=await r.json();
+   if(!j.ok) throw new Error(j.error||"Ошибка");
+   render(j.data);
+ }catch(e){rows.innerHTML='<tr><td colspan="4" class="error">Не удалось загрузить данные: '+e.message+'</td></tr>'}
+}
+function render(arr){
+ let y=0,n=0,p=0;
+ arr.forEach(x=>{if(x.attendance==="Келемін"){y++;p+=Number(x.guests||0)}else n++});
+ document.getElementById("yes").textContent=y;document.getElementById("no").textContent=n;document.getElementById("people").textContent=p;
+ document.getElementById("rows").innerHTML=arr.slice().reverse().map(x=>`<tr><td>${esc(x.name)}</td><td class="${x.attendance==="Келемін"?"yes":"no"}">${esc(x.attendance)}</td><td>${esc(x.guests||"0")}</td><td>${esc(x.time||"")}</td></tr>`).join("");
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+load();
+</script>
+</body></html>
